@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="dist" name="ANTProject">
+    <path id="main.classpath">
+        <fileset dir="lib">
+            <include name="**/*.jar"/>
+        </fileset>
+        <pathelement path="${java.class.path}"/>
+    </path>
+
+    <available resource="net/sf/antcontrib/antlib.xml" property="available.antcontrib" classpathref="main.classpath"/>
+    <fail unless="available.antcontrib" message="Can't find antcontrib"/>
+    <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
+
+    <target name="dist">
+        <mkdir dir="tidy"/>
+        <mkdir dir="output"/>
+        <foreach param="fn" target="displaycontent">
+            <path id="display.path">
+                <fileset dir="harvest" includes="displaycontent*"/>
+            </path>
+        </foreach>
+    </target>
+    <target name="output">
+        <xslt basedir="tidy" destdir="output" style="${basedir}/extract.xsl" extension=".xml" includes="*.xml">
+            <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
+        </xslt>
+    </target>
+
+
+    <target name="displaycontent">
+        <propertyregex property="filename" input="${fn}"
+            regexp=".*\${file.separator}displaycontent\.php\@source\_id\=(.*)" select="\1"/>
+        <java jar="lib/jtidy-r938.jar" fork="true" failonerror="false" maxmemory="128m"
+            output="tidy/${filename}.xml" error="jtidy-error.txt">
+            <arg value="-asxml"/>
+            <arg value="-numeric-entities"/>
+            <arg value="true"/>
+            <arg value="-doctype"/>
+            <arg value="omit"/>
+            <arg value="${fn}"/>
+        </java>
+       <!-- <move file="${fn}" tofile="tidy/${filename}.html"/>-->
+    </target>
+
+
+</project>
