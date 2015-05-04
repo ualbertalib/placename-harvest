@@ -11,22 +11,55 @@
     <fail unless="available.antcontrib" message="Can't find antcontrib"/>
     <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
 
-    <target name="dist">
-        <mkdir dir="tidy"/>
-        <mkdir dir="output"/>
-        <foreach param="fn" target="displaycontent">
+    <target name="pages">
+        <mkdir dir="tidy/pages"/>
+        <mkdir dir="output/pages"/>
+        <foreach param="fn" target="page">
             <path id="display.path">
-                <fileset dir="harvest" includes="displaycontent*"/>
+                <fileset dir="harvest/pages" includes="*.html"/>
             </path>
         </foreach>
     </target>
+    
+    <target name="items">
+        <mkdir dir="tidy/items"/>
+        <mkdir dir="output/items"/>
+        <foreach param="fn" target="item">
+            <path id="display.path">
+                <fileset dir="harvest/items" includes="*.xml"/>
+            </path>
+        </foreach>
+    </target>
+
     <target name="output">
-        <xslt basedir="tidy" destdir="output" style="${basedir}/extract.xsl" extension=".xml" includes="*.xml">
+        <xslt basedir="tidy/items" destdir="output/items" style="${basedir}/extract.xsl" extension=".xml" includes="*.xml">
             <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
         </xslt>
     </target>
 
-
+    <target name="csv">
+        <mkdir dir="csv/items"/>
+        <xslt basedir="output/items" destdir="csv/items" style="${basedir}/csv.xsl" extension=".csv" includes="*.xml" filenameparameter="id">
+            <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
+        </xslt>
+        <copy file="csvhead.txt" tofile="csv/placenamesofalberta.csv" overwrite="true"/>
+        <concat destfile="csv/placenamesofalberta.csv" encoding="utf-8" fixlastline="true" append="true" outputencoding="utf-8">
+            <fileset dir="csv/items" includes="*.csv"/>
+        </concat>
+    </target>
+    
+    <target name="pagelinks">
+        <xslt basedir="tidy/pages" destdir="output/pages" style="${basedir}/pagelinks.xsl" extension=".txt" includes="*.xml">
+            <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
+        </xslt>
+        <concat destfile="masterlinks.txt" >
+            <fileset dir="output/pages">
+                <include name="*.txt"/>
+            </fileset>
+        </concat>
+        
+    </target>
+    
     <target name="displaycontent">
         <propertyregex property="filename" input="${fn}"
             regexp=".*\${file.separator}displaycontent\.php\@source\_id\=(.*)" select="\1"/>
@@ -42,5 +75,20 @@
        <!-- <move file="${fn}" tofile="tidy/${filename}.html"/>-->
     </target>
 
-
+    <target name="page">
+        <propertyregex property="filename" input="${fn}"
+            regexp=".*\${file.separator}(\d*\-\d*)\.html" select="\1"/>
+        <java jar="lib/jtidy-r938.jar" fork="true" failonerror="false" maxmemory="128m"
+            output="tidy/pages/${filename}.xml" error="jtidy-error.txt">
+            <arg value="-asxml"/>
+            <arg value="-numeric-entities"/>
+            <arg value="true"/>
+            <arg value="-doctype"/>
+            <arg value="omit"/>
+            <arg value="-quote-ampersand"/>
+            <arg value="${fn}"/>
+        </java>
+        <!-- <move file="${fn}" tofile="tidy/${filename}.html"/>-->
+    </target>
+    
 </project>
